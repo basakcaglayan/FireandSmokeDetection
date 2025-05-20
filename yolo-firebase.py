@@ -19,46 +19,45 @@ firebase_admin.initialize_app(cred, {
 bucket = storage.bucket()
 db_ref = db.reference('/images')
 
-model = YOLO('best.pt')
+model = YOLO('best-1.pt')
 
 bounding_box_annotator = sv.BoundingBoxAnnotator()
 label_annotator = sv.LabelAnnotator()
 
 
-# # 3. Function to Fetch Image from Firebase
-# def get_image_from_firebase():
-#     """Retrieves the latest PNG image from Firebase Storage and converts it to a NumPy array."""
-#     try:
-#         snapshot = db_ref.order_by_key().limit_to_last(1).get()
-#         if snapshot:
-#             for key, value in snapshot.items():
-#                 image_name = value['filename']
-#                 print(f"Image name: {image_name}")
+def get_image_from_firebase():
+    """Retrieves the image from Firebase Storage."""
+    try:
+        # image_name = "firepng.png" # Test için
+        image_name = "data/photo.jpg" # Gerçek dosya yolu
+        image_path = f'{image_name}' # Firebase Storage'daki tam yol
 
-#                 image_path = f'images/{image_name}'
+        blob = bucket.blob(image_path)
+        if not blob.exists():
+            print(f"Hata: Firebase Storage'da '{image_path}' bulunamadı.")
+            return None
 
-#                 blob = bucket.blob(image_path)
-#                 image_data = blob.download_as_bytes()
+        image_data = blob.download_as_bytes()
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Pillow görüntüsünü NumPy dizisine dönüştür (Bu aşamada RGB formatındadır)
+        image_np_rgb = np.array(image)
+        
+        # Eğer görüntü RGBA (alpha kanalı ile) ise RGB'ye çevir
+        if image_np_rgb.shape[2] == 4:
+            image_np_rgb = cv2.cvtColor(image_np_rgb, cv2.COLOR_RGBA2RGB)
+        
+        return image_np_rgb # RGB olarak döndür
 
-#                 image = Image.open(io.BytesIO(image_data))
-#                 image_np = np.array(image)
-
-#                 return image_np
-
-#         else:
-#             print("No images found in Firebase Realtime Database.")
-#             return None
-
-
-#     except Exception as e:
-#         print(f"Error getting image from Firebase: {e}")
-#         return None
-
-
-# # 4. Main Loop
+    except firebase_admin.exceptions.NotFoundError:
+        print(f"Hata: Firebase Storage'da '{image_path}' bulunamadı (SDK hatası).")
+        return None
+    except Exception as e:
+        print(f"Firebase'den görüntü alınırken hata oluştu: {e}")
+        return None
 # def main():
 #     while True:
-#         frame = get_image_from_firebase() 
+#         frame = get_image_from_firebase()
 
 #         if frame is not None:
 #             results = model(frame)[0]
@@ -78,32 +77,6 @@ label_annotator = sv.LabelAnnotator()
 
 #     cv2.destroyAllWindows()
 
-# Manual testing of image retrieval
-def get_image_from_firebase():
-    """Retrieves the image from Firebase Storage.  Filename is now hardcoded for testing."""
-    try:
-        # image_name = "firepng.png"
-        image_name = "data/photo.jpg"
-
-        image_path = f'{image_name}'
-
-
-        blob = bucket.blob(image_path)
-        image_data = blob.download_as_bytes()
-
-        image = Image.open(io.BytesIO(image_data))
-        image_np = np.array(image)
-
-        return image_np
-
-    except FileNotFoundError:
-        print("Error: Service account key file not found.")
-        return None
-    except Exception as e:
-        print(f"Error getting image from Firebase: {e}")
-        return None
-
-
 def main():
     while True:
         frame = get_image_from_firebase()
@@ -112,6 +85,21 @@ def main():
             results = model(frame)[0]
             detections = sv.Detections.from_ultralytics(results)
 
+            fire_detected = False
+            for label in detections.class_id:
+                # Bu kısmı kendi modelinin sınıf adlarına göre düzenle
+                class_name = model.names[label]
+                if "fire" in class_name.lower():  # veya class_name == 'fire' gibi sabit kontrol
+                    fire_detected = True
+                    break
+
+            # Firebase'e yangın durumu güncellemesi
+            db.reference('/status').set({
+                'fire_detected': fire_detected,
+                'timestamp': int(time.time())
+            })
+
+            # Görsel anotasyon ve gösterim
             annotated_image = bounding_box_annotator.annotate(
                 scene=frame, detections=detections)
             annotated_image = label_annotator.annotate(
