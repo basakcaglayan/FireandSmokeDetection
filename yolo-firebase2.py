@@ -1,4 +1,3 @@
-
 import firebase_admin
 import firebase_admin
 from firebase_admin import credentials, storage, db
@@ -36,6 +35,7 @@ label_annotator = sv.LabelAnnotator()
 def get_image_from_firebase():
     """Retrieve and preprocess the image from Firebase Storage."""
     try:
+        # image_name_firebase = "3.jpg"
         image_name_firebase = "data/photo.jpg"
         blob = bucket.blob(image_name_firebase)
 
