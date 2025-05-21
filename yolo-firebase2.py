@@ -10,9 +10,7 @@ import time
 from ultralytics import YOLO
 import supervision as sv
 
-# Firebase Initialization
 try:
-    # Replace with the actual path to your Firebase Admin SDK JSON file
     cred = credentials.Certificate("fireandsmokedetection-8631e-firebase-adminsdk-fbsvc-4b4740fd67.json") 
     firebase_admin.initialize_app(cred, {
         'storageBucket': 'fireandsmokedetection-8631e.firebasestorage.app',  
@@ -26,7 +24,6 @@ except Exception as e:
 bucket = storage.bucket()
 db_ref_status = db.reference('/status')
 
-# YOLO Model Initialization
 try:
     model = YOLO('best.pt')
 except Exception as e:
@@ -39,7 +36,6 @@ label_annotator = sv.LabelAnnotator()
 def get_image_from_firebase():
     """Retrieve and preprocess the image from Firebase Storage."""
     try:
-        # image_name_firebase = "3.jpg"
         image_name_firebase = "data/photo.jpg"
         blob = bucket.blob(image_name_firebase)
 
@@ -48,7 +44,7 @@ def get_image_from_firebase():
             return None
 
         image_data = blob.download_as_bytes()
-        image_pil = Image.open(io.BytesIO(image_data)).convert('RGB')  # Ensures RGB
+        image_pil = Image.open(io.BytesIO(image_data)).convert('RGB')
 
         image_np = np.array(image_pil)
         return image_np
@@ -63,16 +59,13 @@ def main():
         frame_rgb = cv2.flip(get_image_from_firebase(),0)
 
         if frame_rgb is not None:
-            # Resize to model input size
             resized_rgb = cv2.resize(frame_rgb, (640, 640))
 
-            # Convert RGB to BGR (YOLO usually trained on BGR)
             resized_bgr = cv2.cvtColor(resized_rgb, cv2.COLOR_RGB2BGR)
 
             results = model(resized_bgr)[0]
             detections = sv.Detections.from_ultralytics(results)
 
-            # Debug output
             print("=== Detection Results ===")
             print("Boxes:", results.boxes)
             print("Class IDs:", detections.class_id)
@@ -90,7 +83,6 @@ def main():
                         if "fire" in label.lower():
                             LED_STATE = True
 
-            # Update Firebase Realtime Database
             try:
                 db_ref_status.set({
                     'LED_STATE': LED_STATE,
@@ -102,7 +94,6 @@ def main():
             except Exception as e:
                 print(f"[Database Update Error] {e}")
 
-            # Annotate frame
             annotated = resized_bgr.copy()
             custom_labels = []
             for i in range(len(detections.xyxy)):
@@ -114,7 +105,6 @@ def main():
             annotated = bounding_box_annotator.annotate(scene=annotated, detections=detections)
             annotated = label_annotator.annotate(scene=annotated, detections=detections, labels=custom_labels)
 
-            # Show image
             cv2.imshow("Firebase Detection", annotated)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("🛑 Program exited by user.")
