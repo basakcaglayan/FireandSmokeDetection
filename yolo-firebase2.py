@@ -10,10 +10,10 @@ from ultralytics import YOLO
 import supervision as sv
 
 try:
-    cred = credentials.Certificate("fireandsmokedetection-8631e-firebase-adminsdk-fbsvc-4b4740fd67.json") 
+    cred = credentials.Certificate("writeyourowncred.json") 
     firebase_admin.initialize_app(cred, {
-        'storageBucket': 'fireandsmokedetection-8631e.firebasestorage.app',  
-        'databaseURL': 'https://fireandsmokedetection-8631e-default-rtdb.firebaseio.com/' 
+        'storageBucket': '"writeyourownstoragebucket.app',  
+        'databaseURL': '"writeyourownurl.com/' 
     })
 
 except Exception as e:
@@ -35,8 +35,8 @@ label_annotator = sv.LabelAnnotator()
 def get_image_from_firebase():
     """Retrieve and preprocess the image from Firebase Storage."""
     try:
-        # image_name_firebase = "3.jpg"
-        image_name_firebase = "data/photo.jpg"
+        image_name_firebase = "fire3.jpg"
+        # image_name_firebase = "data/photo.jpg"
         blob = bucket.blob(image_name_firebase)
 
         if not blob.exists():
@@ -56,7 +56,7 @@ def get_image_from_firebase():
 def main():
     """Main loop for detection and Firebase update."""
     while True:
-        frame_rgb = cv2.flip(get_image_from_firebase(),0)
+        frame_rgb = get_image_from_firebase()
 
         if frame_rgb is not None:
             resized_rgb = cv2.resize(frame_rgb, (640, 640))
