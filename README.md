@@ -138,4 +138,8 @@ You can deploy the detection system on a local Raspberry Pi or any PC with a web
 - [OpenCV](https://opencv.org/)
 - [Firebase](https://firebase.google.com/)
 - [Roboflow](https://roboflow.com/) – for dataset annotation
+<<<<<<< HEAD
 - [ESP32-CAM Tutorials](https://randomnerdtutorials.com/esp32-cam/)
+=======
+- [ESP32-CAM Tutorials](https://randomnerdtutorials.com/esp32-cam/)
+>>>>>>> c7323478ff296de60eafd9d5683dfbd1ba3cd557
